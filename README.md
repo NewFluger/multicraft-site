@@ -17,6 +17,20 @@ python -m http.server 8000
 
 и откройте http://127.0.0.1:8000.
 
+## Исходник и сборка
+
+Исходник — `source.html` (ссылается на `assets/`). Сборка в самодостаточный `index.html`:
+
+```powershell
+multitool-node --skill websites site.cjs bundle source.html index.html
+```
+
+Проверка:
+
+```powershell
+multitool-node --skill websites site.cjs check index.html
+```
+
 ## Обновление версии
 
 1. Замените установщик в `files/`.

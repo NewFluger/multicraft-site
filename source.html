@@ -1,0 +1,942 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MultiCraft — лаунчер Minecraft для Windows</title>
+<meta name="description" content="MultiCraft — лаунчер Minecraft Java Edition: автоскачивание версий и Java, моды с Modrinth, HUD, музыка из внешнего плеера и пресеты разрешения. Скачать для Windows 10/11.">
+<meta name="theme-color" content="#050609">
+<meta property="og:title" content="MultiCraft — лаунчер Minecraft">
+<meta property="og:description" content="Версии, Java, моды и HUD в одном лаунчере. Скачать для Windows.">
+<meta property="og:type" content="website">
+<link rel="icon" href="assets/icon.png" type="image/png">
+<style>
+  :root {
+    --bg: #050609;
+    --bg-soft: #080a10;
+    --panel: #0c0f16;
+    --panel-2: #10141d;
+    --line: #1c2230;
+    --line-2: #2a3244;
+    --text: #f2f5fa;
+    --muted: #949dad;
+    --accent: #8b5cf6;
+    --accent-2: #a78bfa;
+    --cyan: #22d3ee;
+    --mint: #34d399;
+    --danger: #f87171;
+    --radius: 16px;
+    --max: 1140px;
+    --ease: cubic-bezier(.2, .7, .2, 1);
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; scroll-padding-top: 84px; }
+  body {
+    margin: 0;
+    background:
+      radial-gradient(1000px 560px at 88% -8%, rgba(139, 92, 246, .18), transparent 62%),
+      radial-gradient(760px 460px at 4% 6%, rgba(34, 211, 238, .09), transparent 60%),
+      var(--bg);
+    color: var(--text);
+    font: 16px/1.62 "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+  body.modal-open { overflow: hidden; }
+  img { max-width: 100%; display: block; }
+  a { color: inherit; }
+  ::selection { background: rgba(139, 92, 246, .35); }
+  .wrap { width: min(var(--max), calc(100% - 40px)); margin: 0 auto; }
+  .mono { font-family: "Cascadia Code", Consolas, "Courier New", monospace; }
+
+  #scrollbar {
+    position: fixed; top: 0; left: 0; height: 2px; width: 100%;
+    transform-origin: 0 50%; transform: scaleX(0);
+    background: linear-gradient(90deg, var(--accent), var(--cyan));
+    z-index: 60;
+  }
+
+  header {
+    position: sticky; top: 0; z-index: 40;
+    background: rgba(5, 6, 9, .74);
+    backdrop-filter: blur(16px) saturate(140%);
+    border-bottom: 1px solid rgba(28, 34, 48, .8);
+  }
+  .nav { display: flex; align-items: center; gap: 28px; height: 70px; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 800; letter-spacing: -.02em; text-decoration: none; }
+  .brand img { width: 34px; height: 34px; border-radius: 9px; box-shadow: 0 0 0 1px rgba(255,255,255,.08), 0 8px 20px rgba(0,0,0,.5); }
+  .nav-links { display: flex; gap: 4px; margin-left: auto; }
+  .nav-links a {
+    position: relative; color: var(--muted); text-decoration: none;
+    font-size: 14.5px; font-weight: 600; padding: 9px 12px; border-radius: 8px;
+    transition: color .25s var(--ease), background .25s var(--ease);
+  }
+  .nav-links a::after {
+    content: ""; position: absolute; left: 12px; right: 12px; bottom: 5px; height: 1px;
+    background: linear-gradient(90deg, var(--accent), var(--cyan));
+    transform: scaleX(0); transform-origin: 0 50%; transition: transform .3s var(--ease);
+  }
+  .nav-links a:hover { color: var(--text); background: rgba(255,255,255,.04); }
+  .nav-links a:hover::after { transform: scaleX(1); }
+  .nav-cta {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: linear-gradient(135deg, var(--accent), #6d28d9);
+    color: #fff; text-decoration: none; border: 1px solid rgba(255,255,255,.12);
+    padding: 10px 18px; border-radius: 999px; font-size: 14px; font-weight: 700;
+    box-shadow: 0 8px 24px rgba(139, 92, 246, .3);
+    transition: transform .25s var(--ease), box-shadow .25s var(--ease), filter .25s var(--ease);
+  }
+  .nav-cta:hover { transform: translateY(-1px); box-shadow: 0 12px 30px rgba(139, 92, 246, .45); filter: brightness(1.08); }
+
+  .hero { position: relative; padding: 78px 0 64px; }
+  .hero::before {
+    content: ""; position: absolute; inset: -80px 0 auto; height: 620px; pointer-events: none;
+    background: radial-gradient(380px 260px at var(--mx, 70%) var(--my, 30%), rgba(139, 92, 246, .12), transparent 70%);
+    transition: background .2s linear;
+  }
+  .hero-grid { position: relative; display: grid; grid-template-columns: 1.04fr .96fr; gap: 58px; align-items: center; }
+  .eyebrow {
+    display: inline-flex; align-items: center; gap: 9px;
+    font-size: 12px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+    color: var(--accent-2); background: rgba(139, 92, 246, .1);
+    border: 1px solid rgba(139, 92, 246, .28);
+    padding: 7px 12px; border-radius: 999px;
+  }
+  .eyebrow i { width: 6px; height: 6px; border-radius: 50%; background: var(--mint); box-shadow: 0 0 12px var(--mint); }
+  h1 {
+    margin: 20px 0 18px; font-size: clamp(42px, 5.4vw, 68px); line-height: .98;
+    letter-spacing: -.05em; font-weight: 800;
+  }
+  h1 .grad {
+    background: linear-gradient(100deg, var(--accent-2) 0%, var(--cyan) 55%, var(--mint) 100%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .lead { margin: 0 0 30px; font-size: 18px; color: var(--muted); max-width: 47ch; }
+  .cta-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+    font: inherit; font-weight: 700; font-size: 16px; text-decoration: none;
+    padding: 15px 24px; border-radius: 12px; border: 1px solid transparent;
+    cursor: pointer; user-select: none;
+    transition: transform .25s var(--ease), box-shadow .3s var(--ease), background .3s var(--ease), border-color .3s var(--ease), color .2s;
+  }
+  .btn:focus-visible { outline: 3px solid rgba(139, 92, 246, .45); outline-offset: 3px; }
+  .btn.primary {
+    color: #fff;
+    background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 55%, #6d28d9 100%);
+    box-shadow: 0 12px 30px rgba(124, 58, 237, .35), inset 0 1px 0 rgba(255,255,255,.2);
+  }
+  .btn.primary:hover { transform: translateY(-2px); box-shadow: 0 18px 44px rgba(124, 58, 237, .5), inset 0 1px 0 rgba(255,255,255,.25); }
+  .btn.primary:active { transform: translateY(0); }
+  .btn .size { font-weight: 500; opacity: .78; font-size: 14px; }
+  .btn.ghost {
+    color: var(--text); background: rgba(255,255,255,.03);
+    border-color: var(--line-2);
+  }
+  .btn.ghost:hover { background: rgba(255,255,255,.07); border-color: #3b455c; transform: translateY(-1px); }
+  .btn[disabled] { opacity: .65; cursor: default; transform: none; }
+  .meta-line { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 24px; color: var(--muted); font-size: 13px; }
+  .meta-line span { display: inline-flex; align-items: center; gap: 7px; }
+  .dot { width: 4px; height: 4px; border-radius: 50%; background: #59627a; }
+
+  .stage { position: relative; }
+  .stage::before {
+    content: ""; position: absolute; inset: 8% 2% 2%; z-index: 0;
+    background: radial-gradient(circle at 60% 35%, rgba(139, 92, 246, .35), transparent 65%);
+    filter: blur(40px);
+  }
+  .window {
+    position: relative; z-index: 1;
+    background: #0a0c12;
+    border: 1px solid var(--line-2);
+    border-radius: 16px;
+    box-shadow: 0 40px 90px rgba(0, 0, 0, .65), 0 0 0 1px rgba(255,255,255,.02) inset;
+    overflow: hidden;
+    transform: perspective(1400px) rotateY(-3deg) rotateX(1.5deg);
+    transition: transform .6s var(--ease), box-shadow .6s var(--ease), border-color .3s;
+  }
+  .window:hover { transform: perspective(1400px) rotateY(0) rotateX(0) scale(1.008); border-color: rgba(139, 92, 246, .45); box-shadow: 0 50px 110px rgba(0, 0, 0, .7), 0 0 40px rgba(139, 92, 246, .12); }
+  .window-bar {
+    display: flex; align-items: center; gap: 10px; padding: 10px 14px;
+    border-bottom: 1px solid var(--line); font-size: 12px; color: var(--muted); font-weight: 600;
+    background: linear-gradient(180deg, rgba(255,255,255,.035), transparent);
+  }
+  .dots { display: inline-flex; gap: 6px; }
+  .dots i { width: 8px; height: 8px; border-radius: 50%; background: #2a3141; }
+  .dots i:nth-child(1) { background: #f87171; opacity: .45; }
+  .dots i:nth-child(2) { background: #fbbf24; opacity: .45; }
+  .dots i:nth-child(3) { background: #34d399; opacity: .45; }
+  .win-title { margin-left: 4px; }
+  .win-ver { margin-left: auto; font-size: 11px; color: #8b95a7; }
+  .window img { width: 100%; height: auto; aspect-ratio: 16 / 10; object-fit: cover; }
+  .window-foot {
+    position: absolute; left: 12px; right: 12px; bottom: 12px;
+    display: flex; align-items: center; gap: 10px;
+    background: rgba(10, 12, 18, .82);
+    border: 1px solid rgba(255,255,255,.1);
+    border-radius: 12px; padding: 9px 10px;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, .55);
+    backdrop-filter: blur(14px);
+  }
+  .foot-version { display: flex; flex-direction: column; line-height: 1.25; padding-left: 4px; }
+  .foot-version strong { font-size: 13px; }
+  .foot-version span { font-size: 11px; color: var(--muted); }
+  .fake-play {
+    margin-left: auto; background: linear-gradient(135deg, #34d399, #0ea371); color: #04231a;
+    font-weight: 800; font-size: 13px; padding: 9px 24px; border-radius: 9px;
+    box-shadow: 0 8px 20px rgba(52, 211, 153, .25);
+  }
+  .chip {
+    position: absolute; z-index: 2;
+    background: rgba(10, 12, 18, .88); color: #fff;
+    border: 1px solid rgba(255,255,255,.12);
+    border-radius: 10px; padding: 8px 11px;
+    font-size: 11.5px; font-weight: 700; letter-spacing: .02em;
+    box-shadow: 0 16px 34px rgba(0, 0, 0, .55);
+    backdrop-filter: blur(10px);
+    animation: float 6s ease-in-out infinite;
+  }
+  .chip small { display: block; font-size: 9px; color: #93a0b5; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; }
+  .chip-a { top: 54px; left: -20px; }
+  .chip-b { top: 138px; right: -18px; animation-delay: -3s; }
+  @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-7px); } }
+
+  .stats {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px;
+    background: var(--line); border: 1px solid var(--line); border-radius: 14px; overflow: hidden;
+    margin-top: 10px;
+  }
+  .stat { background: var(--bg-soft); padding: 18px 20px; }
+  .stat strong { display: block; font-size: 24px; letter-spacing: -.03em; background: linear-gradient(120deg, #fff, var(--accent-2)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .stat span { font-size: 12.5px; color: var(--muted); }
+
+  section { padding: 34px 0 78px; }
+  .section-head { max-width: 660px; margin-bottom: 34px; }
+  .section-head h2 { margin: 0 0 10px; font-size: clamp(28px, 3.5vw, 40px); letter-spacing: -.04em; line-height: 1.08; }
+  .section-head p { margin: 0; color: var(--muted); font-size: 16px; }
+
+  .reveal { opacity: 0; transform: translateY(20px); transition: opacity .7s var(--ease), transform .7s var(--ease); }
+  .reveal.in { opacity: 1; transform: none; }
+
+  .download { padding-top: 14px; }
+  .dcard {
+    position: relative; border-radius: 20px; padding: 1px;
+    background: linear-gradient(135deg, rgba(139, 92, 246, .55), rgba(34, 211, 238, .25) 45%, rgba(28, 34, 48, .9));
+  }
+  .dcard-inner {
+    position: relative; border-radius: 19px; background: linear-gradient(160deg, #0d1018, #080a10 70%);
+    padding: 38px 40px; display: grid; grid-template-columns: 1.2fr .8fr; gap: 36px; overflow: hidden;
+  }
+  .dcard-inner::after {
+    content: ""; position: absolute; width: 460px; height: 460px; right: -160px; top: -180px;
+    background: radial-gradient(circle, rgba(139, 92, 246, .25), transparent 65%); pointer-events: none;
+  }
+  .dcard h2 { margin: 14px 0 8px; font-size: clamp(26px, 3vw, 34px); letter-spacing: -.035em; }
+  .dcard p { margin: 0; color: var(--muted); font-size: 15px; max-width: 48ch; }
+  .badge {
+    display: inline-flex; align-items: center; gap: 7px;
+    border: 1px solid var(--line-2); color: #cbd2de; background: rgba(255,255,255,.02);
+    font-size: 12px; font-weight: 600; border-radius: 999px; padding: 6px 11px;
+  }
+  .badge i { width: 6px; height: 6px; border-radius: 50%; background: var(--mint); box-shadow: 0 0 10px var(--mint); }
+  .row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 22px; }
+  .hash-box { align-self: end; position: relative; z-index: 1; }
+  .hash-box .label { font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: #8691a4; font-weight: 700; margin-bottom: 8px; }
+  .hash-row {
+    display: flex; align-items: center; gap: 10px;
+    background: #0a0d14; border: 1px solid var(--line);
+    border-radius: 10px; padding: 10px 12px;
+    transition: border-color .3s;
+  }
+  .hash-row:hover { border-color: var(--line-2); }
+  .hash-row code { font-size: 12px; color: #d7dce6; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .copy {
+    margin-left: auto; flex: none; background: #171c27; color: #dfe4ee;
+    border: 1px solid #2a3244; border-radius: 7px; padding: 7px 12px;
+    font: inherit; font-size: 12px; font-weight: 600; cursor: pointer;
+    transition: background .25s, border-color .25s, transform .2s;
+  }
+  .copy:hover { background: #202736; border-color: #3b455c; transform: translateY(-1px); }
+  .copy:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .hash-note { margin-top: 9px; font-size: 11.5px; color: #8691a4; }
+  .fine { margin-top: 16px; font-size: 12.5px; color: #9aa4b6; max-width: 46ch; }
+
+  .features { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .feature {
+    position: relative; background: linear-gradient(170deg, var(--panel-2), var(--panel));
+    border: 1px solid var(--line); border-radius: 15px; padding: 22px 20px;
+    transition: transform .35s var(--ease), border-color .35s var(--ease), box-shadow .35s var(--ease);
+    overflow: hidden;
+  }
+  .feature::before {
+    content: ""; position: absolute; inset: 0; opacity: 0; pointer-events: none;
+    background: radial-gradient(320px 160px at 20% 0%, rgba(139, 92, 246, .18), transparent 70%);
+    transition: opacity .4s var(--ease);
+  }
+  .feature:hover { transform: translateY(-5px); border-color: rgba(139, 92, 246, .42); box-shadow: 0 20px 44px rgba(0, 0, 0, .5), 0 0 0 1px rgba(139, 92, 246, .12); }
+  .feature:hover::before { opacity: 1; }
+  .feature .ico {
+    position: relative; width: 40px; height: 40px; border-radius: 11px;
+    background: linear-gradient(135deg, rgba(139, 92, 246, .22), rgba(34, 211, 238, .12));
+    border: 1px solid rgba(139, 92, 246, .25); color: var(--accent-2);
+    display: grid; place-items: center; margin-bottom: 15px;
+    transition: transform .35s var(--ease), color .3s;
+  }
+  .feature:hover .ico { transform: translateY(-2px) scale(1.05); color: #fff; }
+  .feature h3 { position: relative; margin: 0 0 6px; font-size: 16.5px; letter-spacing: -.01em; }
+  .feature p { position: relative; margin: 0; color: var(--muted); font-size: 14px; line-height: 1.55; }
+
+  .changelog { display: grid; gap: 12px; }
+  .release {
+    display: grid; grid-template-columns: 150px 1fr; gap: 24px;
+    background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 20px 24px;
+    transition: border-color .3s, background .3s;
+  }
+  .release:hover { border-color: var(--line-2); background: var(--panel-2); }
+  .release .v { font-weight: 800; font-size: 15px; letter-spacing: -.01em; }
+  .release .v span { display: block; margin-top: 4px; color: var(--muted); font-size: 12px; font-weight: 500; }
+  .release ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 5px; }
+  .release li { position: relative; padding-left: 16px; color: #c7cede; font-size: 14.5px; }
+  .release li::before { content: ""; position: absolute; left: 0; top: .62em; width: 5px; height: 5px; border-radius: 50%; background: linear-gradient(135deg, var(--accent), var(--cyan)); }
+
+  .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 26px; }
+  .step { position: relative; padding-top: 16px; border-top: 1px solid var(--line); }
+  .step::before {
+    counter-increment: step; content: counter(step);
+    position: absolute; top: -16px; left: 0; width: 30px; height: 30px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), #5b21b6); color: #fff;
+    font-size: 14px; font-weight: 800; display: grid; place-items: center;
+    box-shadow: 0 8px 20px rgba(139, 92, 246, .35);
+  }
+  .steps { counter-reset: step; }
+  .step h3 { margin: 10px 0 6px; font-size: 17px; }
+  .step p { margin: 0; color: var(--muted); font-size: 14.5px; }
+
+  .split { display: grid; grid-template-columns: 1fr 1.15fr; gap: 44px; align-items: start; }
+  .spec { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+  .spec div { display: flex; justify-content: space-between; gap: 18px; padding: 13px 18px; border-bottom: 1px solid var(--line); font-size: 14px; transition: background .25s; }
+  .spec div:hover { background: rgba(255,255,255,.02); }
+  .spec div:last-child { border-bottom: 0; }
+  .spec dt { color: var(--muted); }
+  .spec dd { margin: 0; font-weight: 600; text-align: right; }
+
+  details { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; margin-bottom: 10px; transition: border-color .3s, background .3s; }
+  details:hover { border-color: var(--line-2); }
+  details[open] { background: var(--panel-2); }
+  details summary {
+    cursor: pointer; list-style: none; padding: 15px 18px; font-weight: 650; font-size: 15px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  details summary::-webkit-details-marker { display: none; }
+  details summary::after { content: "+"; margin-left: auto; color: var(--muted); font-size: 19px; font-weight: 500; transition: transform .3s var(--ease); }
+  details[open] summary::after { content: "–"; }
+  details summary:focus-visible { outline: 3px solid rgba(139, 92, 246, .4); outline-offset: -3px; border-radius: 12px; }
+  details p { margin: 0; padding: 0 18px 16px; color: var(--muted); font-size: 14.5px; }
+
+  .final {
+    position: relative; text-align: center; padding: 56px 24px;
+    border: 1px solid var(--line); border-radius: 20px; overflow: hidden;
+    background: radial-gradient(700px 300px at 50% 0%, rgba(139, 92, 246, .22), transparent 70%), var(--panel);
+  }
+  .final h2 { margin: 0 0 10px; font-size: clamp(28px, 3.4vw, 38px); letter-spacing: -.04em; }
+  .final p { margin: 0 auto 24px; color: var(--muted); max-width: 46ch; }
+
+  footer { border-top: 1px solid var(--line); padding: 28px 0 36px; color: var(--muted); font-size: 13px; }
+  .foot { display: flex; flex-wrap: wrap; gap: 12px 26px; align-items: center; }
+  .foot .brand { font-size: 14px; color: var(--text); }
+  .foot .brand img { width: 26px; height: 26px; }
+  .foot .sep { margin-left: auto; }
+  .foot a { color: var(--muted); text-decoration: none; transition: color .2s; }
+  .foot a:hover { color: var(--text); }
+
+  .modal[hidden] { display: none; }
+  .modal { position: fixed; inset: 0; z-index: 80; display: grid; place-items: center; padding: 20px; }
+  .modal-backdrop { position: absolute; inset: 0; background: rgba(2, 3, 6, .78); backdrop-filter: blur(8px); animation: fade .25s var(--ease); }
+  .modal-card {
+    position: relative; width: min(560px, 100%); background: linear-gradient(160deg, #0e1118, #080a10);
+    border: 1px solid var(--line-2); border-radius: 18px; padding: 30px;
+    box-shadow: 0 40px 100px rgba(0, 0, 0, .7);
+    animation: rise .3s var(--ease);
+  }
+  .modal-card.wide { width: min(860px, 100%); padding: 16px; }
+  .modal-x {
+    position: absolute; top: 12px; right: 12px; width: 34px; height: 34px;
+    border-radius: 9px; border: 1px solid var(--line); background: rgba(255,255,255,.03);
+    color: var(--muted); font-size: 20px; line-height: 1; cursor: pointer;
+    transition: background .2s, color .2s, border-color .2s;
+  }
+  .modal-x:hover { background: rgba(255,255,255,.08); color: #fff; border-color: var(--line-2); }
+  .modal-kicker { font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--accent-2); font-weight: 700; }
+  .modal-card h2 { margin: 8px 0 6px; font-size: 26px; letter-spacing: -.03em; }
+  .modal-sub { margin: 0 0 20px; color: var(--muted); font-size: 13.5px; }
+  .file-row { display: flex; align-items: center; gap: 12px; padding: 13px 14px; background: #0a0d14; border: 1px solid var(--line); border-radius: 12px; }
+  .file-icon {
+    width: 40px; height: 40px; border-radius: 10px; flex: none;
+    background: linear-gradient(135deg, rgba(139, 92, 246, .25), rgba(34, 211, 238, .12));
+    border: 1px solid rgba(139, 92, 246, .3); display: grid; place-items: center; color: var(--accent-2);
+  }
+  .file-row strong { display: block; font-size: 13.5px; }
+  .file-row span { display: block; font-size: 12px; color: var(--muted); }
+  .progress { height: 8px; border-radius: 99px; background: #131722; border: 1px solid var(--line); margin-top: 18px; overflow: hidden; }
+  .progress-fill { height: 100%; width: 0%; border-radius: 99px; background: linear-gradient(90deg, var(--accent), var(--cyan)); transition: width .18s linear; box-shadow: 0 0 14px rgba(139, 92, 246, .5); }
+  .progress-meta { display: flex; justify-content: space-between; margin-top: 8px; font-size: 12px; color: var(--muted); }
+  .modal-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
+  .modal-fine { margin: 16px 0 0; font-size: 12px; color: #9aa4b6; }
+  .preview-img { border-radius: 12px; overflow: hidden; border: 1px solid var(--line); }
+  .preview-img img { width: 100%; height: auto; transition: transform .6s var(--ease); }
+  .preview-img:hover img { transform: scale(1.02); }
+  .preview-cap { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 4px 2px; color: var(--muted); font-size: 12.5px; }
+  @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes rise { from { opacity: 0; transform: translateY(14px) scale(.98); } to { opacity: 1; transform: none; } }
+
+  @media (max-width: 980px) {
+    .hero-grid { grid-template-columns: 1fr; gap: 42px; }
+    .stage { max-width: 620px; }
+    .window { transform: none; }
+    .chip-a { left: 8px; }
+    .chip-b { right: 8px; }
+    .dcard-inner { grid-template-columns: 1fr; padding: 30px; }
+    .features { grid-template-columns: repeat(2, 1fr); }
+    .steps { grid-template-columns: 1fr; gap: 34px; }
+    .split { grid-template-columns: 1fr; gap: 28px; }
+    .nav-links { display: none; }
+    .nav-cta { margin-left: auto; }
+    .release { grid-template-columns: 1fr; gap: 10px; }
+    .stats { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 560px) {
+    .wrap { width: calc(100% - 28px); }
+    .hero { padding: 48px 0 36px; }
+    .features { grid-template-columns: 1fr; }
+    .dcard-inner { padding: 24px; }
+    .dcard .btn { width: 100%; }
+    .meta-line { font-size: 12px; }
+    .foot .sep { margin-left: 0; flex-basis: 100%; }
+    .modal-card { padding: 24px; }
+    .modal-card h2 { font-size: 22px; }
+    .modal-actions .btn { width: 100%; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    *, *::before, *::after { animation: none !important; transition-duration: .01ms !important; }
+    .reveal { opacity: 1; transform: none; }
+  }
+</style>
+</head>
+<body>
+<div id="scrollbar" aria-hidden="true"></div>
+
+<header>
+  <div class="wrap nav">
+    <a class="brand" href="#top">
+      <img src="assets/icon.png" alt="" width="34" height="34">
+      <span>MultiCraft</span>
+    </a>
+    <nav class="nav-links" aria-label="Основная навигация">
+      <a href="#features">Возможности</a>
+      <a href="#changelog">Что нового</a>
+      <a href="#install">Установка</a>
+      <a href="#faq">Вопросы</a>
+    </nav>
+    <a class="nav-cta" href="files/MultiCraft-Setup-1.27.0.exe" download data-download>Скачать</a>
+  </div>
+</header>
+
+<main id="top">
+  <section class="hero">
+    <div class="wrap hero-grid">
+      <div>
+        <span class="eyebrow"><i></i>Windows 10/11 · Java Edition · 1.27.0</span>
+        <h1>Minecraft без возни с <span class="grad">Java и модами</span></h1>
+        <p class="lead">MultiCraft сам скачает версию и Java, соберёт сборку с Modrinth и покажет FPS, CPS и музыку прямо в игре. Остаётся нажать «Играть».</p>
+        <div class="cta-row">
+          <a class="btn primary" href="files/MultiCraft-Setup-1.27.0.exe" download data-download id="open-download">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M4 21h16"/></svg>
+            Скачать для Windows <span class="size">54,3 МБ</span>
+          </a>
+          <button class="btn ghost" type="button" id="open-preview" data-preview>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>
+            Посмотреть интерфейс
+          </button>
+        </div>
+        <div class="meta-line">
+          <span><span class="dot"></span>Версия 1.27.0</span>
+          <span><span class="dot"></span>HUD 1.7.0 в комплекте</span>
+          <span><span class="dot"></span>Java скачается сама</span>
+        </div>
+      </div>
+
+      <div class="stage">
+        <div class="chip chip-a"><small>TPS</small>20.0</div>
+        <div class="chip chip-b"><small>HUD</small>1.7.0</div>
+        <div class="window" aria-hidden="true">
+          <div class="window-bar">
+            <span class="dots"><i></i><i></i><i></i></span>
+            <span class="win-title">MultiCraft</span>
+            <span class="win-ver">1.27.0</span>
+          </div>
+          <img src="assets/hero.png" alt="" width="1680" height="1050" id="hero-img" fetchpriority="high">
+          <div class="window-foot">
+            <div class="foot-version">
+              <strong>1.21.4</strong>
+              <span>готова к запуску</span>
+            </div>
+            <span class="fake-play">Играть</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section style="padding-top:0">
+    <div class="wrap">
+      <div class="stats reveal">
+        <div class="stat"><strong>10</strong><span>модулей HUD</span></div>
+        <div class="stat"><strong>5</strong><span>перф-модов из коробки</span></div>
+        <div class="stat"><strong>10000</strong><span>лимит FPS</span></div>
+        <div class="stat"><strong>1.21.4</strong><span>и другие версии Mojang</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="download" id="download">
+    <div class="wrap">
+      <div class="dcard reveal">
+        <div class="dcard-inner">
+          <div>
+            <span class="badge"><i></i>Windows 10/11 · x64 · установщик</span>
+            <h2>Скачать MultiCraft 1.27.0</h2>
+            <p>Поставится в профиль пользователя, создаст ярлыки на рабочем столе и в «Пуск». Права администратора не нужны.</p>
+            <div class="row">
+              <a class="btn primary" href="files/MultiCraft-Setup-1.27.0.exe" download data-download>
+                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M4 21h16"/></svg>
+                Скачать установщик <span class="size">54,3 МБ</span>
+              </a>
+            </div>
+            <p class="fine">Файл без цифровой подписи: SmartScreen может показать предупреждение. Нажмите «Подробнее» → «Выполнить всё равно».</p>
+          </div>
+          <div class="hash-box">
+            <div class="label">SHA-256 установщика</div>
+            <div class="hash-row">
+              <code id="sha-label">A39118F38F2D…7F1EFBF96260</code>
+              <button class="copy" id="copy-sha" type="button">Копировать</button>
+            </div>
+            <div class="hash-note">Сверьте хеш после скачивания: <span class="mono" style="font-size:11px">certutil -hashfile</span> в PowerShell.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="features">
+    <div class="wrap">
+      <div class="section-head reveal">
+        <h2>Что уже работает</h2>
+        <p>Не обещания на будущее, а функции текущей версии — от загрузки файлов до HUD в игре.</p>
+      </div>
+      <div class="features">
+        <article class="feature reveal">
+          <div class="ico" aria-hidden="true">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M7 21h10M12 18v3M6 9h5M6 12h8"/></svg>
+          </div>
+          <h3>HUD в игре</h3>
+          <p>FPS, CPS, TPS, броня, зелья, TargetHUD и панель «Сейчас играет». Размер модуля настраивается по ЛКМ, темы — в меню RightShift.</p>
+        </article>
+        <article class="feature reveal">
+          <div class="ico" aria-hidden="true">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 3h6v4l3 5v7a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2v-7l3-5V3Z"/><path d="M8 13h8"/></svg>
+          </div>
+          <h3>Моды с Modrinth</h3>
+          <p>Поиск и установка модов, ресурспаков и шейдеров из лаунчера с подбором под версию и загрузчик. Никаких ручных архивов.</p>
+        </article>
+        <article class="feature reveal">
+          <div class="ico" aria-hidden="true">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 18V6l10-2v11"/><circle cx="6" cy="18" r="3"/><circle cx="16" cy="15" r="3"/></svg>
+          </div>
+          <h3>Музыка из системы</h3>
+          <p>Яндекс Музыка, браузер или плеер — трек и артист появляются в HUD, а значок в верхней панели загорается, пока играет музыка.</p>
+        </article>
+        <article class="feature reveal">
+          <div class="ico" aria-hidden="true">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z"/></svg>
+          </div>
+          <h3>Производительность</h3>
+          <p>Sodium, Lithium, FerriteCore, ImmediatelyFast и EntityCulling ставятся автоматически. G1 и лимит FPS подобраны в настройках.</p>
+        </article>
+        <article class="feature reveal">
+          <div class="ico" aria-hidden="true">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M4 12h16M4 17h10"/><path d="M17 15v4M15 17h4"/></svg>
+          </div>
+          <h3>Версии и Java</h3>
+          <p>Список версий Mojang, проверка SHA1 и автоматическая Java. Есть офлайн-запуск, если интернет пропал после загрузки.</p>
+        </article>
+        <article class="feature reveal">
+          <div class="ico" aria-hidden="true">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6 8-6s8 2 8 6"/></svg>
+          </div>
+          <h3>Скины, серверы, окно</h3>
+          <p>Скин виден в игре, серверы синхронизируются с Minecraft, а разрешение выбирается из 16:9, 4:3, 16:5, 21:9 или своего.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section id="changelog">
+    <div class="wrap">
+      <div class="section-head reveal">
+        <h2>Что нового</h2>
+        <p>Последние обновления лаунчера и HUD — без мелкого шрифта.</p>
+      </div>
+      <div class="changelog">
+        <article class="release reveal">
+          <div class="v">1.27.0<span>19 ноября 2026</span></div>
+          <ul>
+            <li>Пресет разрешения 16:5 (1920×600) к 16:9, 4:3, 21:9 и своему</li>
+            <li>Скорость взмаха 0.5x–2x и цвет неба в меню HUD</li>
+            <li>ЛКМ по модулю — размер 75–150%, ПКМ — скрыть модуль</li>
+          </ul>
+        </article>
+        <article class="release reveal">
+          <div class="v">1.26.0<span>19 ноября 2026</span></div>
+          <ul>
+            <li>Музыка из внешнего плеера: трек и артист в HUD</li>
+            <li>Мост медиасессии Windows работает, пока открыт лаунчер</li>
+            <li>HUD 1.6.0 ставится автоматически</li>
+          </ul>
+        </article>
+        <article class="release reveal">
+          <div class="v">1.25.0<span>19 ноября 2026</span></div>
+          <ul>
+            <li>Верхняя панель HUD уменьшена до 160×18, лицо — 10×10</li>
+            <li>Компактнее отступы и читаемее мелкий текст</li>
+          </ul>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section id="install">
+    <div class="wrap">
+      <div class="section-head reveal">
+        <h2>Установка за три шага</h2>
+        <p>Скачивание, установка и первый запуск занимают меньше времени, чем настройка одного модпака вручную.</p>
+      </div>
+      <div class="steps">
+        <div class="step reveal">
+          <h3>Скачайте установщик</h3>
+          <p>Кнопка выше или ссылка вверху страницы. Нужен Windows 10/11 x64, около 300 МБ на диске под лаунчер и Java.</p>
+        </div>
+        <div class="step reveal">
+          <h3>Запустите и войдите</h3>
+          <p>Установщик создаст ярлыки. При первом старте лаунчер поставит Java и предложит ник или вход Microsoft — без пароля тоже можно.</p>
+        </div>
+        <div class="step reveal">
+          <h3>Выберите версию и играйте</h3>
+          <p>Файлы версии и перф-моды скачаются один раз. Дальше — кнопка «Играть»; HUD 1.7.0 ставится сам для 1.21.4.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap split">
+      <div>
+        <div class="section-head reveal" style="margin-bottom:18px">
+          <h2 style="font-size:28px">Что нужно</h2>
+          <p>Без экзотики: обычный ПК с Windows.</p>
+        </div>
+        <dl class="spec reveal">
+          <div><dt>Система</dt><dd>Windows 10/11, 64 бита</dd></div>
+          <div><dt>Оперативная память</dt><dd>4 ГБ минимум · 8 ГБ комфортно</dd></div>
+          <div><dt>Диск</dt><dd>~300 МБ лаунчер + Java</dd></div>
+          <div><dt>Java</dt><dd>Не нужна — скачается сама</dd></div>
+          <div><dt>Интернет</dt><dd>Для версий, модов и онлайна</dd></div>
+        </dl>
+      </div>
+      <div id="faq">
+        <div class="section-head reveal" style="margin-bottom:18px">
+          <h2 style="font-size:28px">Частые вопросы</h2>
+          <p>Честно о том, что может смутить.</p>
+        </div>
+        <details class="reveal">
+          <summary>Почему Windows предупреждает при запуске?</summary>
+          <p>У установщика нет платной цифровой подписи, поэтому SmartScreen показывает общее предупреждение. Сверьте SHA-256 с указанным на этой странице: если хеш совпал, файл не изменён.</p>
+        </details>
+        <details class="reveal">
+          <summary>Нужно ли ставить Java отдельно?</summary>
+          <p>Нет. Лаунчер скачает рантайм Mojang под нужную версию и будет использовать его. Вручную путь задаётся в настройках, если у вас уже есть своя Java.</p>
+        </details>
+        <details class="reveal">
+          <summary>Где хранятся миры и настройки?</summary>
+          <p>В <span class="mono">%APPDATA%\.multicraft</span>. При обновлении на новую версию папка не удаляется: миры, конфиги HUD и скины остаются на месте.</p>
+        </details>
+        <details class="reveal">
+          <summary>Это официальный лаунчер Minecraft?</summary>
+          <p>Нет, это сторонний лаунчер. Он не связан с Mojang или Microsoft; Minecraft — товарный знак Mojang Synergies AB. Для входа нужен купленный аккаунт, если вы играете по лицензии.</p>
+        </details>
+        <details class="reveal">
+          <summary>Как обновиться на новую версию?</summary>
+          <p>Скачайте новый установщик и поставьте поверх: ярлыки заменятся, а данные в профиле сохранятся. Лаунчер сам обновит HUD и перф-моды при следующем запуске игры.</p>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <section style="padding-top:0">
+    <div class="wrap">
+      <div class="final reveal">
+        <h2>Готовы играть?</h2>
+        <p>Установщик, Java и перф-моды — один клик. Дальше только выбор версии и кнопка «Играть».</p>
+        <a class="btn primary" href="files/MultiCraft-Setup-1.27.0.exe" download data-download>
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M4 21h16"/></svg>
+          Скачать MultiCraft 1.27.0
+        </a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap foot">
+    <a class="brand" href="#top">
+      <img src="assets/icon.png" alt="" width="26" height="26">
+      <span>MultiCraft</span>
+    </a>
+    <span>Версия 1.27.0 · ноябрь 2026</span>
+    <span class="sep"></span>
+    <a href="files/MultiCraft-Setup-1.27.0.exe" download>Установщик</a>
+    <span>Не связан с Mojang / Microsoft</span>
+  </div>
+</footer>
+
+<div class="modal" id="dl-modal" hidden>
+  <div class="modal-backdrop" data-close></div>
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="dl-title">
+    <button class="modal-x" type="button" data-close aria-label="Закрыть">×</button>
+    <span class="modal-kicker">MultiCraft 1.27.0</span>
+    <h2 id="dl-title">Скачивание установщика</h2>
+    <p class="modal-sub">54,3 МБ · Windows 10/11 x64 · без прав администратора</p>
+    <div class="file-row">
+      <div class="file-icon" aria-hidden="true">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v12M7 10l5 5 5-5M4 21h16"/></svg>
+      </div>
+      <div>
+        <strong>MultiCraft-Setup-1.27.0.exe</strong>
+        <span id="dl-status">Готов к загрузке</span>
+      </div>
+    </div>
+    <div class="progress" aria-hidden="true"><div class="progress-fill" id="dl-fill"></div></div>
+    <div class="progress-meta"><span id="dl-percent">0%</span><span id="dl-bytes">0 МБ из 54,3 МБ</span></div>
+    <div class="modal-actions">
+      <button class="btn primary" type="button" id="dl-start">Начать скачивание</button>
+      <a class="btn ghost" href="files/MultiCraft-Setup-1.27.0.exe" download id="dl-direct">Прямая ссылка</a>
+    </div>
+    <p class="modal-fine">Файл без цифровой подписи — SmartScreen может предупредить. Если браузер не даёт скачать через страницу, откроется прямая ссылка.</p>
+  </div>
+</div>
+
+<div class="modal" id="pv-modal" hidden>
+  <div class="modal-backdrop" data-close></div>
+  <div class="modal-card wide" role="dialog" aria-modal="true" aria-labelledby="pv-title">
+    <button class="modal-x" type="button" data-close aria-label="Закрыть">×</button>
+    <div class="preview-img"><img id="pv-img" alt="Главный экран лаунчера MultiCraft"></div>
+    <div class="preview-cap"><span id="pv-title">Главный экран лаунчера</span><span>Версия 1.27.0 · 1.21.4</span></div>
+  </div>
+</div>
+
+<noscript>
+  <div class="wrap" style="padding:0 0 24px;color:#949dad;font-size:13px">
+    JavaScript выключен — кнопки скачивания работают как обычные ссылки.
+  </div>
+</noscript>
+
+<script>
+(function () {
+  "use strict";
+  var FILE = "files/MultiCraft-Setup-1.27.0.exe";
+  var TOTAL = 56966754;
+  var SHA = "A39118F38F2D61158513B9CF401F6C4F2406DC739C0B575B01BC7F1EFBF96260";
+
+  var bar = document.getElementById("scrollbar");
+  if (bar) {
+    var onScroll = function () {
+      var d = document.documentElement;
+      var max = d.scrollHeight - d.clientHeight;
+      bar.style.transform = "scaleX(" + (max > 0 ? d.scrollTop / max : 0) + ")";
+    };
+    addEventListener("scroll", onScroll, { passive: true });
+    onScroll();
+  }
+
+  var hero = document.querySelector(".hero");
+  if (hero && matchMedia("(pointer: fine)").matches) {
+    hero.addEventListener("mousemove", function (e) {
+      var r = hero.getBoundingClientRect();
+      hero.style.setProperty("--mx", ((e.clientX - r.left) / r.width * 100) + "%");
+      hero.style.setProperty("--my", ((e.clientY - r.top) / r.height * 100) + "%");
+    });
+  }
+
+  var reveals = document.querySelectorAll(".reveal");
+  if ("IntersectionObserver" in window && reveals.length) {
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (entry.isIntersecting) {
+          entry.target.classList.add("in");
+          io.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.12 });
+    reveals.forEach(function (el) { io.observe(el); });
+  } else {
+    reveals.forEach(function (el) { el.classList.add("in"); });
+  }
+
+  function openModal(id) {
+    var modal = document.getElementById(id);
+    if (!modal) return;
+    modal.hidden = false;
+    document.body.classList.add("modal-open");
+    var focus = modal.querySelector("button, a");
+    if (focus) focus.focus();
+  }
+  function closeModals() {
+    document.querySelectorAll(".modal").forEach(function (m) { m.hidden = true; });
+    document.body.classList.remove("modal-open");
+  }
+  document.querySelectorAll("[data-download]").forEach(function (el) {
+    el.addEventListener("click", function (e) {
+      if (e.metaKey || e.ctrlKey || e.shiftKey) return;
+      e.preventDefault();
+      openModal("dl-modal");
+    });
+  });
+  document.querySelectorAll("[data-preview]").forEach(function (el) {
+    el.addEventListener("click", function (e) {
+      e.preventDefault();
+      var source = document.getElementById("hero-img");
+      var target = document.getElementById("pv-img");
+      if (source && target) target.src = source.src;
+      openModal("pv-modal");
+    });
+  });
+  document.querySelectorAll("[data-close]").forEach(function (el) {
+    el.addEventListener("click", closeModals);
+  });
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape") closeModals();
+  });
+
+  var start = document.getElementById("dl-start");
+  var fill = document.getElementById("dl-fill");
+  var percent = document.getElementById("dl-percent");
+  var bytes = document.getElementById("dl-bytes");
+  var status = document.getElementById("dl-status");
+  var controller = null;
+  var downloading = false;
+
+  function mb(n) { return (n / 1048576).toFixed(1).replace(".", ",") + " МБ"; }
+  function setProgress(pct, got, total) {
+    if (fill) fill.style.width = pct + "%";
+    if (percent) percent.textContent = pct + "%";
+    if (bytes) bytes.textContent = mb(got) + " из " + mb(total);
+  }
+
+  function saveBlob(blob) {
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url;
+    a.download = "MultiCraft-Setup-1.27.0.exe";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(function () { URL.revokeObjectURL(url); }, 60000);
+  }
+
+  if (start) {
+    start.addEventListener("click", function () {
+      if (downloading) return;
+      downloading = true;
+      controller = new AbortController();
+      start.disabled = true;
+      start.textContent = "Скачиваем…";
+      if (status) status.textContent = "Загрузка файла";
+      setProgress(0, 0, TOTAL);
+      fetch(FILE, { signal: controller.signal, cache: "no-store" })
+        .then(function (res) {
+          if (!res.ok) throw new Error("HTTP " + res.status);
+          var total = Number(res.headers.get("content-length")) || TOTAL;
+          if (!res.body || !res.body.getReader) {
+            return res.blob().then(function (blob) {
+              setProgress(100, total, total);
+              saveBlob(blob);
+              if (status) status.textContent = "Готово — файл сохранён";
+            });
+          }
+          var reader = res.body.getReader();
+          var chunks = [];
+          var got = 0;
+          function pump() {
+            return reader.read().then(function (step) {
+              if (step.done) {
+                var blob = new Blob(chunks, { type: "application/octet-stream" });
+                setProgress(100, total, total);
+                saveBlob(blob);
+                if (status) status.textContent = "Готово — файл сохранён";
+                return;
+              }
+              chunks.push(step.value);
+              got += step.value.length;
+              var pct = Math.min(99, Math.round(got / total * 100));
+              setProgress(pct, got, total);
+              return pump();
+            });
+          }
+          return pump();
+        })
+        .catch(function (err) {
+          if (err && err.name === "AbortError") {
+            if (status) status.textContent = "Отменено";
+          } else {
+            if (status) status.textContent = "Открываю прямую ссылку";
+            window.location.href = FILE;
+          }
+        })
+        .then(function () {
+          downloading = false;
+          start.disabled = false;
+          start.textContent = "Скачать ещё раз";
+        });
+    });
+  }
+
+  var copy = document.getElementById("copy-sha");
+  var label = document.getElementById("sha-label");
+  if (copy) {
+    copy.addEventListener("click", function () {
+      function done() {
+        copy.textContent = "Скопировано";
+        setTimeout(function () { copy.textContent = "Копировать"; }, 1600);
+      }
+      function fallback() {
+        var area = document.createElement("textarea");
+        area.value = SHA;
+        area.setAttribute("readonly", "");
+        area.style.position = "fixed";
+        area.style.opacity = "0";
+        document.body.appendChild(area);
+        area.select();
+        try { document.execCommand("copy"); done(); } catch (e) { if (label) label.textContent = SHA; }
+        document.body.removeChild(area);
+      }
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(SHA).then(done).catch(fallback);
+      } else {
+        fallback();
+      }
+    });
+  }
+})();
+</script>
+</body>
+</html>
