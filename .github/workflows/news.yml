@@ -1,0 +1,35 @@
+name: MultiCraft news bot
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: multicraft-news
+  cancel-in-progress: false
+
+jobs:
+  news:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check site and post
+        env:
+          MULTICRAFT_BOT_TOKEN: ${{ secrets.MULTICRAFT_BOT_TOKEN }}
+          MULTICRAFT_CHANNEL: "@tgkcoqoza"
+        run: python3 bot/news_watch.py
+
+      - name: Save version state
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add bot/state.json
+          if ! git diff --cached --quiet; then
+            git commit -m "Update news state"
+            git push
+          fi
