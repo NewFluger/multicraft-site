@@ -1,0 +1,49 @@
+name: MultiCraft Telegram bot
+
+on:
+  schedule:
+    - cron: "0 */6 * * *"
+  workflow_dispatch:
+    inputs:
+      max_seconds:
+        description: "Длительность сессии, секунд"
+        required: false
+        default: "20700"
+      chain:
+        description: "Запустить следующую сессию"
+        type: boolean
+        default: true
+
+concurrency:
+  group: multicraft-telegram-bot
+  cancel-in-progress: false
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  bot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 355
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run bot
+        env:
+          MULTICRAFT_BOT_TOKEN: ${{ secrets.MULTICRAFT_BOT_TOKEN }}
+          MULTICRAFT_CHANNEL: "@tgkcoqoza"
+          MULTICRAFT_ADMINS: ${{ vars.MULTICRAFT_ADMINS }}
+        run: python bot/telegram_bot.py --max-seconds ${{ github.event.inputs.max_seconds || '20700' }}
+      - name: Chain next run
+        if: success() && (github.event_name == 'schedule' || github.event.inputs.chain == 'true')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          curl -fsS -X POST \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${{ github.repository }}/actions/workflows/bot.yml/dispatches" \
+            -d '{"ref":"main","inputs":{"max_seconds":"20700","chain":"true"}}'
